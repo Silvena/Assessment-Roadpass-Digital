@@ -1,0 +1,31 @@
+{
+  "name": "assessment-roadpass-digital",
+  "version": "1.0.0",
+  "description": "Roadpass Digital QA Assessment  Automated trip-planning tests for Roadtrippers using Playwright &amp; TypeScript.  Includes:  Part 1: POM-based test suite (Happy Path, Edge, &amp; Negative cases).  Part 2: CircleCI integration strategy &amp; .circleci/config.yml.  Part 3: API &amp; Bonus extensions.  Focuses on clean code, stable waits, and CI/CD scalability.",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:ci": "playwright test --reporter=junit,html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Silvena/Assessment-Roadpass-Digital.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Silvena/Assessment-Roadpass-Digital/issues"
+  },
+  "homepage": "https://github.com/Silvena/Assessment-Roadpass-Digital#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}
