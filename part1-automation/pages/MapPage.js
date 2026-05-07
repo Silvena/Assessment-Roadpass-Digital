@@ -23,20 +23,7 @@ class MapPage extends BasePage {
   // "New Trip" button covers many possible labels/roles Roadtrippers may use.
   // The `.or()` chain falls back left-to-right; `.first()` prevents strict-mode errors.
   get newTripButton() {
-    return this.page
-      .locator([
-        'button:has-text("New Trip")',
-        'a:has-text("New Trip")',
-        'button:has-text("Create Trip")',
-        'a:has-text("Create Trip")',
-        'button:has-text("Start Trip")',
-        '[data-testid="new-trip-button"]',
-        '[data-testid="create-trip"]',
-        '[aria-label*="new trip" i]',
-        '[aria-label*="create trip" i]',
-        '[title*="new trip" i]',
-      ].join(', '))
-      .first();
+    return this.page.getByRole('button', { name: 'Start Trip' });
   }
 
   get userMenuButton() {
