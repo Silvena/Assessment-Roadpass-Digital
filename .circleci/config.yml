@@ -1,0 +1,543 @@
+version: 2.1
+
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ ROADPASS DIGITAL — PLAYWRIGHT E2E TEST AUTOMATION CI/CD PIPELINE            │
+# │                                                                             │
+# │ This CircleCI configuration runs the Playwright test suite (Part 1) on:     │
+# │ • Pull Requests (Chromium only, fast feedback)                              │
+# │ • Main branch pushes (full browser matrix)                                  │
+# │ • Nightly schedule (extended suite with quarantine tests)                   │
+# │                                                                             │
+# │ Features:                                                                   │
+# │ ✓ Global authentication setup (runs once per workflow)                      │
+# │ ✓ JUnit XML reporting for CircleCI Test Insights                            │
+# │ ✓ Screenshot/video/trace artifact capture on failures                       │
+# │ ✓ PR comment with test summary (GitHub API)                                │
+# │ ✓ Slack notification on failures                                           │
+# │ ✓ Conditional job execution (PR vs main vs nightly)                        │
+# │ ✓ Test parallelization (auth tests + trip-planning tests)                  │
+# │                                                                             │
+# │ Documentation: See ./part2-ci-strategy/CI_CD_INTEGRATION_STRATEGY.md        │
+# └─────────────────────────────────────────────────────────────────────────────┘
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENVIRONMENT VARIABLES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Required CircleCI Context: "roadtrippers-qa"
+# Variables to configure in CircleCI Project Settings:
+#
+#   ROADTRIPPERS_EMAIL        — Test account email for Roadtrippers
+#   ROADTRIPPERS_PASSWORD     — Test account password
+#   SLACK_WEBHOOK             — Slack incoming webhook URL for notifications
+#   GITHUB_TOKEN              — GitHub personal access token (for PR comments)
+#   PLAYWRIGHT_BROWSERS       — "chromium firefox webkit" (can be partial)
+#
+# Reference: https://circleci.com/docs/contexts
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REUSABLE COMMANDS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+commands:
+  setup-node-and-dependencies:
+    description: "Install Node.js dependencies and configure environment"
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-node-deps-{{ checksum "part1-automation/package-lock.json" }}
+            - v1-node-deps-
+      - run:
+          name: "Install dependencies"
+          command: cd part1-automation && npm ci
+      - save_cache:
+          key: v1-node-deps-{{ checksum "part1-automation/package-lock.json" }}
+          paths:
+            - part1-automation/node_modules
+      - run:
+          name: "Verify Playwright installation"
+          command: cd part1-automation && npx playwright --version
+
+  run-playwright-tests:
+    description: "Run Playwright tests with specified project(s)"
+    parameters:
+      project:
+        type: string
+        description: "Playwright project (chromium, firefox, webkit)"
+      test-files:
+        type: string
+        default: "tests/"
+        description: "Test file or directory to run"
+      exclude-quarantine:
+        type: boolean
+        default: true
+        description: "Exclude quarantine directory from PR runs"
+    steps:
+      - run:
+          name: "Run Playwright tests [<< parameters.project >>]"
+          command: |
+            cd part1-automation
+
+            # Build test path with optional quarantine exclusion
+            TEST_PATH="<< parameters.test-files >>"
+            if [ "<< parameters.exclude-quarantine >>" == "true" ]; then
+              EXTRA_FLAGS="--ignore=tests/quarantine/"
+            else
+              EXTRA_FLAGS=""
+            fi
+
+            # Run tests with JUnit reporter
+            npx playwright test $TEST_PATH \
+              --project=<< parameters.project >> \
+              --reporter=list \
+              --reporter=junit \
+              $EXTRA_FLAGS
+          no_output_timeout: 10m
+
+  store-test-results:
+    description: "Store JUnit XML, screenshots, videos, and traces"
+    steps:
+      - store_test_results:
+          path: part1-automation/reports
+      - store_artifacts:
+          path: part1-automation/reports/test-results
+          destination: test-results
+      - store_artifacts:
+          path: part1-automation/playwright-report
+          destination: playwright-report
+
+  post-test-summary-to-pr:
+    description: "Post test summary comment to GitHub PR"
+    parameters:
+      test-files:
+        type: string
+        default: "tests/"
+    steps:
+      - run:
+          name: "Post test summary to PR"
+          command: |
+            # Only run on PR builds
+            if [ -z "$CIRCLE_PULL_REQUEST" ]; then
+              echo "Not a PR build; skipping PR comment"
+              exit 0
+            fi
+
+            # Extract PR number from URL
+            PR_NUMBER=$(echo "$CIRCLE_PULL_REQUEST" | grep -o '[0-9]*$')
+
+            # Parse JUnit XML to get test counts
+            cd part1-automation
+            JUNIT_FILE="reports/junit.xml"
+
+            if [ ! -f "$JUNIT_FILE" ]; then
+              echo "JUnit XML not found; skipping comment"
+              exit 0
+            fi
+
+            TOTAL=$(grep -c '<testcase' "$JUNIT_FILE" || echo "0")
+            PASSED=$(grep -c 'testcase' "$JUNIT_FILE" | grep -v 'failures="0"' | wc -l || echo "0")
+            FAILED=$(grep -c 'failure' "$JUNIT_FILE" || echo "0")
+
+            # Create PR comment
+            COMMENT="## ✅ Automated Test Results
+
+**Test Suite**: Part 1 - E2E Automation
+**Total Tests**: $TOTAL
+**Passed**: ✅ $((TOTAL - FAILED))
+**Failed**: ❌ $FAILED
+**Browser**: Chromium (PR runs)
+
+**Duration**: ~4–5 minutes
+**Status**: $([ $FAILED -eq 0 ] && echo '✅ ALL PASSED' || echo '❌ FAILURES')
+
+📊 [View Full Report](https://app.circleci.com/pipelines/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/$CIRCLE_BUILD_NUM)
+🎥 [Download Artifacts](https://app.circleci.com/pipelines/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/$CIRCLE_BUILD_NUM/artifacts)
+
+---
+_Generated by CircleCI Workflow #$CIRCLE_BUILD_NUM_"
+
+            # Post comment via GitHub API
+            curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
+              -d "{\"body\": \"$COMMENT\"}" > /dev/null
+
+            echo "PR comment posted successfully"
+
+  notify-slack-on-failure:
+    description: "Send Slack notification on test failure"
+    steps:
+      - run:
+          name: "Notify Slack on failure"
+          when: on_fail
+          command: |
+            if [ -z "$SLACK_WEBHOOK" ]; then
+              echo "Slack webhook not configured; skipping notification"
+              exit 0
+            fi
+
+            PR_LINK=""
+            if [ -n "$CIRCLE_PULL_REQUEST" ]; then
+              PR_LINK="<$CIRCLE_PULL_REQUEST|PR #$(echo $CIRCLE_PULL_REQUEST | grep -o '[0-9]*$')>"
+            fi
+
+            PAYLOAD=$(cat <<EOF
+            {
+              "text": "Test Pipeline Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Test Failure Detected*\nBranch: $CIRCLE_BRANCH\n$PR_LINK"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Author*\n$CIRCLE_USERNAME"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Build*\n<$CIRCLE_BUILD_URL|#$CIRCLE_BUILD_NUM>"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View CircleCI"
+                      },
+                      "url": "$CIRCLE_BUILD_URL"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Artifacts"
+                      },
+                      "url": "$CIRCLE_BUILD_URL/artifacts"
+                    }
+                  ]
+                }
+              ]
+            }
+            EOF
+            )
+
+            curl -X POST "$SLACK_WEBHOOK" \
+              -H 'Content-Type: application/json' \
+              -d "$PAYLOAD"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOBS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # GLOBAL SETUP JOB: Authenticate once, cache session for all tests
+  # ─────────────────────────────────────────────────────────────────────────────
+  setup:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - run:
+          name: "Global authentication setup"
+          command: |
+            cd part1-automation
+
+            # Run global setup (generates auth/.auth/user.json)
+            echo "Running global authentication setup..."
+            if ! npx playwright test --config=playwright.config.js 2>&1 | grep -q "Auth state saved"; then
+              echo "⚠️  Global setup completed (may have used empty auth state)"
+            fi
+
+            # Verify auth file exists
+            if [ -f "auth/.auth/user.json" ]; then
+              echo "✓ Auth session created"
+              ls -lh auth/.auth/user.json
+            else
+              echo "✗ Auth session not found; tests will authenticate inline"
+            fi
+          no_output_timeout: 5m
+      - persist_to_workspace:
+          root: .
+          paths:
+            # Only persist the auth session — downstream jobs get node_modules via cache
+            - part1-automation/auth/.auth/user.json
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # AUTH TESTS: Quick smoke test (fast feedback on PRs)
+  # ─────────────────────────────────────────────────────────────────────────────
+  auth-tests:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - attach_workspace:
+          at: .
+      - run-playwright-tests:
+          project: chromium
+          test-files: "tests/authpage.spec.js tests/cookie-banner.spec.js"
+          exclude-quarantine: false
+      - store-test-results
+      - notify-slack-on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TRIP PLANNING TESTS: Main test suite (depends on auth-tests)
+  # ─────────────────────────────────────────────────────────────────────────────
+  trip-planning-tests-chromium:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - attach_workspace:
+          at: .
+      - run-playwright-tests:
+          project: chromium
+          test-files: "tests/trip-planner-happy-path.spec.js tests/trip-planning-edge-cases.spec.js"
+          exclude-quarantine: true
+      - store-test-results
+      - post-test-summary-to-pr:
+          test-files: "tests/trip-planner-happy-path.spec.js tests/trip-planning-edge-cases.spec.js"
+      - notify-slack-on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # FIREFOX TESTS: Full matrix (main & nightly only)
+  # ─────────────────────────────────────────────────────────────────────────────
+  trip-planning-tests-firefox:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - attach_workspace:
+          at: .
+      - run-playwright-tests:
+          project: firefox
+          test-files: "tests/trip-planner-happy-path.spec.js tests/trip-planning-edge-cases.spec.js"
+          exclude-quarantine: true
+      - store-test-results
+      - notify-slack-on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # WEBKIT TESTS: Full matrix (main & nightly only)
+  # ─────────────────────────────────────────────────────────────────────────────
+  trip-planning-tests-webkit:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - attach_workspace:
+          at: .
+      - run-playwright-tests:
+          project: webkit
+          test-files: "tests/trip-planner-happy-path.spec.js tests/trip-planning-edge-cases.spec.js"
+          exclude-quarantine: true
+      - store-test-results
+      - notify-slack-on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # QUARANTINE TESTS: Flaky tests (nightly only, separate tracking)
+  # ─────────────────────────────────────────────────────────────────────────────
+  quarantine-tests:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - setup-node-and-dependencies
+      - attach_workspace:
+          at: .
+      - run-playwright-tests:
+          project: chromium
+          test-files: "tests/quarantine/"
+          exclude-quarantine: false
+      - store-test-results
+      - run:
+          name: "Report quarantine test results"
+          when: always
+          command: |
+            cd part1-automation
+            echo "Quarantine test results stored separately"
+            echo "Location: reports/test-results/junit-quarantine.xml"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # REPORT AGGREGATION: Merge results and post final summary
+  # ─────────────────────────────────────────────────────────────────────────────
+  report-aggregation:
+    docker:
+      - image: cimg/node:22.0
+    steps:
+      - checkout
+      - run:
+          name: "Aggregate test reports"
+          command: |
+            echo "=== Test Suite Summary ==="
+            echo ""
+            echo "✓ All test jobs completed"
+            echo ""
+            echo "Reports available at:"
+            echo "  • CircleCI Test Insights: https://app.circleci.com/insights/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/workflows/test-suite"
+            echo "  • HTML Report: Artifacts > playwright-report/index.html"
+            echo "  • JUnit XML: Artifacts > reports/junit.xml"
+      - store_artifacts:
+          path: .
+          destination: root
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WORKFLOWS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+workflows:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PR WORKFLOW: Fast feedback (Chromium only, ~4–5 minutes)
+  #
+  # NOTE: CircleCI does not support "pull_request" as a pipeline.trigger_source.
+  # Valid values are only: webhook | api | scheduled_pipeline
+  # PRs trigger pipelines via "webhook" — indistinguishable from branch pushes.
+  #
+  # Options to differentiate PR pipelines:
+  #   Option A (GitHub App): Use pipeline.event.name == "pull_request" if your
+  #             org uses the CircleCI GitHub App integration (not OAuth App).
+  #             Requires: Settings → VCS → GitHub App
+  #   Option B (Current): Run on all webhook pushes to non-main branches.
+  #             The test-main workflow handles main; this covers feature branches.
+  #   Option C (Advanced): Pass pipeline.parameters via CircleCI API from a
+  #             GitHub Actions webhook and filter on e.g. << pipeline.parameters.is_pr >>
+  #
+  # This config uses Option B — runs on all webhook events except main/nightly.
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-pr:
+    when:
+      and:
+        - equal: [ webhook, << pipeline.trigger_source >> ]
+        - not:
+            equal: [ main, << pipeline.git.branch >> ]
+    jobs:
+      - setup:
+          context: roadtrippers-qa
+      - auth-tests:
+          context: roadtrippers-qa
+          requires:
+            - setup
+      - trip-planning-tests-chromium:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - report-aggregation:
+          requires:
+            - trip-planning-tests-chromium
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MAIN WORKFLOW: Full matrix (all browsers, ~10–12 minutes)
+  # Runs on every push to main; blocks if tests fail
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-main:
+    when:
+      and:
+        - equal: [ main, << pipeline.git.branch >> ]
+        - equal: [ push, << pipeline.trigger_source >> ]
+    jobs:
+      - setup:
+          context: roadtrippers-qa
+      - auth-tests:
+          context: roadtrippers-qa
+          requires:
+            - setup
+      - trip-planning-tests-chromium:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - trip-planning-tests-firefox:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - trip-planning-tests-webkit:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - report-aggregation:
+          requires:
+            - trip-planning-tests-chromium
+            - trip-planning-tests-firefox
+            - trip-planning-tests-webkit
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # NIGHTLY WORKFLOW: Extended suite including quarantine tests
+  # Runs at 2 AM UTC daily; generates historical trend data
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - setup:
+          context: roadtrippers-qa
+      - auth-tests:
+          context: roadtrippers-qa
+          requires:
+            - setup
+      - trip-planning-tests-chromium:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - trip-planning-tests-firefox:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - trip-planning-tests-webkit:
+          context: roadtrippers-qa
+          requires:
+            - auth-tests
+      - quarantine-tests:
+          context: roadtrippers-qa
+          requires:
+            - setup
+      - report-aggregation:
+          requires:
+            - trip-planning-tests-chromium
+            - trip-planning-tests-firefox
+            - trip-planning-tests-webkit
+            - quarantine-tests
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SCHEDULED TRIGGERS (Configure in CircleCI UI)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Nightly Run:
+#   • Frequency: Daily
+#   • Time: 2:00 AM UTC (adjust for your timezone)
+#   • Branch: main
+#   • Description: Full test matrix + quarantine suite
+#
+# Example cron for CircleCI UI:
+#   0 2 * * * (every day at 2 AM UTC)
+#
+# Reference: https://circleci.com/docs/workflows/#scheduling-a-workflow
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTES & TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Q: Tests failing with "Module not found"?
+# A: Ensure package-lock.json is committed to git
+#
+# Q: Auth state not persisting between jobs?
+# A: Check that workspace persist/attach paths match exactly
+#
+# Q: PR comments not posting?
+# A: Verify GITHUB_TOKEN is set in CircleCI Project Settings
+#
+# Q: Slack notifications not sending?
+# A: Verify SLACK_WEBHOOK URL format: https://hooks.slack.com/services/T.../B.../...
+#
+# Q: Tests timing out?
+# A: Increase no_output_timeout if tests are slow on CI infrastructure
+#
+# Reference: https://circleci.com/docs

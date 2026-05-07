@@ -148,8 +148,12 @@ vite.config.ts.timestamp-*
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/auth/.auth/
 /reports/test-results/
 /reports/playwright-report/
 
 .idea/
 test-results/
+package-lock.json
+package.json
+
