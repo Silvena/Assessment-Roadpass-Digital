@@ -37,11 +37,11 @@ commands:
         description: Exclude quarantine directory from PR runs
     steps:
       - run:
-          name: 'Run Playwright tests [\<< parameters.project >>]'
+          name: 'Run Playwright tests [<< parameters.project >>]'
           command: |
             cd part1-automation
-            TEST_PATH="\<< parameters.test-files >>"
-            if [ \<< parameters.exclude-quarantine >> == "true" ]; then
+            TEST_PATH="<< parameters.test-files >>"
+            if [ << parameters.exclude-quarantine >> == "true" ]; then
               EXTRA_FLAGS="--ignore=tests/quarantine/"
             else
               EXTRA_FLAGS=""
@@ -49,7 +49,7 @@ commands:
 
             # Run tests with JUnit reporter
             npx playwright test $TEST_PATH \
-              --project=\<< parameters.project >> \
+              --project=<< parameters.project >> \
               --reporter=list,junit \
               $EXTRA_FLAGS
           no_output_timeout: 10m
@@ -144,7 +144,7 @@ commands:
               PR_LINK="<$CIRCLE_PULL_REQUEST|PR #$(echo $CIRCLE_PULL_REQUEST | grep -o '[0-9]*$')>"
             fi
 
-            PAYLOAD=$(cat <<EOF
+            PAYLOAD=$(cat \<<EOF
             {
               "text": "Test Pipeline Failed",
               "blocks": [
