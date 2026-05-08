@@ -64,7 +64,8 @@
 Workflow: test-pr
 ├─ setup (1 min)                    [Global auth]
 │  ├─ auth-tests (2 min)            [Chromium, quick smoke]
-│  └─ trip-planning (5 min)         [Chromium, main suite]
+│  ├─ trip-planning (5 min)         [Chromium, main suite]
+│  └─ api-tests (2 min)             [Part 3 API tests]
 │     └─ report-aggregation (30s)   [Summary + PR comment]
 └─ Total: ~8 min (parallel execution)
 ```

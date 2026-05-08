@@ -58,6 +58,7 @@ class AuthPage extends BasePage {
         await this.page.evaluate(() => {
             document.getElementById('onetrust-consent-sdk')?.remove();
             document.querySelector('.onetrust-pc-dark-filter')?.remove();
+            document.querySelector('.rt-modal-background')?.remove();
             document.getElementById('gist-overlay')?.remove();
             document.getElementById('gist-embed-message')?.remove();
         }).catch(() => {});

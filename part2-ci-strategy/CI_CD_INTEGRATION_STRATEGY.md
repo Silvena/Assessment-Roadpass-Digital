@@ -49,7 +49,11 @@ CircleCI Workflow: "test-suite"
 ├── Job 3: firefox-tests (if main branch)  [~8 min] (parallel to Job 1/2)
 ├── Job 4: webkit-tests (if main branch)   [~8 min] (parallel to Job 1/2)
 │
-└── Job 5: report-aggregation             [~30s] (depends on all above)
+Job 5: api-tests (parallel)                     [~2 min]
+│   └── roadTrippers.api.spec.js
+│   └── artifact: api-test-results
+│
+Job 6: report-aggregation                       [~30s] (depends on all above)
     └── Merge reports, post PR comment, send Slack notification
 ```
 
@@ -96,6 +100,15 @@ jobs:
 - **Fast PR feedback** (~3–5 min vs 15 min full matrix)
 - **Parallel execution** reduces overall pipeline time
 - **Session reuse** across jobs cuts auth overhead
+
+---
+
+### 1.4 API Testing Integration (Part 3)
+
+The API test suite (`part3-bonus/api-tests`) is integrated into all workflows. 
+- **Execution**: Runs in parallel with E2E tests.
+- **Config**: Uses `part3-bonus/playwright-config.js`.
+- **Reporting**: Results are stored in `part3-bonus/test-results` and aggregated in the final report.
 
 ---
 
