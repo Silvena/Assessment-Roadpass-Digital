@@ -26,24 +26,22 @@ module.exports = defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
 
- // In CI, retry flaky tests up to 2 times. Locally, no retries.
+  /* In CI, retry flaky tests up to 2 times. Locally, no retries. */
   retries: process.env.CI ? 2 : 0,
 
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 2 : 1,
 
-
   reporter: process.env.CI
-  ? [
-      ['junit', { outputFile: 'test-results/junit.xml' }],
-      ['html', { open: 'never', outputFolder: 'playwright-report' }],
-      ['list'],
-    ]
-  :[
-      ['html', { open: 'on-failure', outputFolder: 'playwright-report' }],
-      ['list'],
-
-   ],
+    ? [
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['html', { open: 'never', outputFolder: 'playwright-report' }],
+        ['list'],
+      ]
+    : [
+        ['html', { open: 'on-failure', outputFolder: 'playwright-report' }],
+        ['list'],
+      ],
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
