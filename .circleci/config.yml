@@ -205,22 +205,16 @@ jobs:
       - setup-node-and-dependencies
       - run:
           name: Global authentication setup
-          command: >
+          command: |
             cd part1-automation
 
-
             # Run global setup (generates auth/.auth/user.json)
-
             echo "Running global authentication setup..."
-
-            if ! npx playwright test --config=playwright.config.js 2>&1 | grep
-            -q "Auth state saved"; then
+            if ! npx playwright test --config=playwright.config.js 2>&1 | grep -q "Auth state saved"; then
               echo "??  Global setup completed (may have used empty auth state)"
             fi
 
-
             # Verify auth file exists
-
             if [ -f "auth/.auth/user.json" ]; then
               echo "? Auth session created"
               ls -lh auth/.auth/user.json
