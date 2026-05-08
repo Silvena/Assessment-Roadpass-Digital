@@ -58,6 +58,7 @@ Part 2 delivers a **production-ready CircleCI integration strategy** for the Pla
 | **Conditional workflows** | ✅ | PR (fast) vs main (full matrix) vs nightly (extended) |
 | **JUnit XML reporting** | ✅ | Generated for CircleCI Test Insights |
 | **Artifact capture** | ✅ | Screenshots, videos, traces, HTML report |
+| **API tests (Part 3)** | ✅ | Runs in parallel; uses `part3-bonus` paths |
 | **PR comments** | ✅ | Auto-posts test summary with links |
 | **Slack notifications** | ✅ | On failure, with build/PR/artifact links |
 | **Environment variables** | ✅ | Secure credential management via contexts |
@@ -74,8 +75,9 @@ Part 2 delivers a **production-ready CircleCI integration strategy** for the Pla
 1. **setup** — Global auth (runs once)
 2. **auth-tests** — Quick smoke test (auth + cookie-banner)
 3. **trip-planning-tests-{chromium,firefox,webkit}** — Main suite (all browsers)
-4. **quarantine-tests** — Flaky tests (nightly only)
-5. **report-aggregation** — Final summary
+4. **api-tests** — Part 3 API tests (runs in parallel)
+5. **quarantine-tests** — Flaky tests (nightly only)
+6. **report-aggregation** — Final summary
 
 **Workflow Definitions**:
 1. **test-pr** — On every PR (Chromium only, ~4–5 min)
