@@ -154,6 +154,5 @@ vite.config.ts.timestamp-*
 
 .idea/
 test-results/
-package-lock.json
-package.json
+
 
