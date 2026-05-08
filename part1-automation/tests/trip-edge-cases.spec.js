@@ -22,7 +22,6 @@ test.describe('Trip Planning - New Edge Cases', () => {
 
     await mapPage.navigate();
     await authPage.dismissCookieBanner();
-    await mapPage.waitForMapLoad();
 
     // Dismiss any modal that appears on load
     await mapPage.dismissAnyModal();
@@ -37,6 +36,8 @@ test.describe('Trip Planning - New Edge Cases', () => {
         process.env.ROADTRIPPERS_PASSWORD
       );
       await mapPage.waitForMapLoad();
+    } else {
+       console.log('Already logged in');
     }
   });
 
