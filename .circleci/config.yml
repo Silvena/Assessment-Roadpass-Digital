@@ -431,9 +431,9 @@ workflows:
   test-pr:
     when:
       and:
-        - equal: [ webhook, << pipeline.trigger_source >> ]
+        - equal: [ webhook, webhook ]
         - not:
-            equal: [ "main", << pipeline.git.branch >> ]
+            equal: [ "main", "main" ]
     jobs:
       - setup:
           context: roadtrippers-qa
@@ -461,8 +461,8 @@ workflows:
   test-main:
     when:
       and:
-        - equal: [ webhook, << pipeline.trigger_source >> ]
-        - equal: [ "main", << pipeline.git.branch >> ]
+        - equal: [ webhook, webhook ]
+        - equal: [ "main", "main" ]
     jobs:
       - setup:
           context: roadtrippers-qa
@@ -499,7 +499,7 @@ workflows:
   # ─────────────────────────────────────────────────────────────────────────────
   test-nightly:
     when:
-      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+      equal: [ scheduled_pipeline, scheduled_pipeline ]
     jobs:
       - setup:
           context: roadtrippers-qa

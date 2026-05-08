@@ -9,10 +9,10 @@ jobs:
     docker:
       - image: cimg/base:current
     environment:
-      COMPONENT_NAME: << pipeline.deploy.component_name >>
-      NAMESPACE: << pipeline.deploy.namespace >>
-      ENVIRONMENT_NAME: << pipeline.deploy.environment_name >>
-      TARGET_VERSION: << pipeline.deploy.target_version >>
+      COMPONENT_NAME: pre-prod
+      NAMESPACE: roadtrippers-qa
+      ENVIRONMENT_NAME: qa
+      TARGET_VERSION: latest
     steps:
       - checkout
       - attach_workspace:
