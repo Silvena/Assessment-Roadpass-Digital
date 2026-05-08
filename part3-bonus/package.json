@@ -1,0 +1,13 @@
+{
+  "name": "roadtrippers-api-tests",
+  "version": "1.0.0",
+  "description": "Playwright API tests for maps.roadtrippers.com",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}
+
