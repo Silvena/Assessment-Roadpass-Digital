@@ -4,15 +4,19 @@ commands:
     description: Install Node.js dependencies and configure environment
     steps:
       - checkout
+      - run:
+          name: List files for debugging
+          command: ls -la
       - restore_cache:
           keys:
+            - 'v1-node-deps-{{ checksum "package-lock.json" }}'
             - 'v1-node-deps-{{ checksum "package.json" }}'
             - v1-node-deps-
       - run:
           name: Install dependencies
           command: npm install
       - save_cache:
-          key: 'v1-node-deps-{{ checksum "package.json" }}'
+          key: 'v1-node-deps-{{ checksum "package-lock.json" }}'
           paths:
             - node_modules
       - run:
@@ -196,6 +200,7 @@ commands:
               -d "$PAYLOAD"
 jobs:
   setup:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -226,6 +231,7 @@ jobs:
             - part1-automation/auth/.auth/user.json
             - part1-automation/reports/test-results/setup-failure.png
   auth-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -239,6 +245,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   trip-planning-tests-chromium:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -258,6 +265,7 @@ jobs:
             tests/trip-planning-edge-cases.spec.js
       - notify-slack-on-failure
   trip-planning-tests-firefox:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -273,6 +281,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   trip-planning-tests-webkit:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -288,6 +297,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   quarantine-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -306,6 +316,7 @@ jobs:
             echo "Quarantine test results stored separately"
             echo "Location: part1-automation/reports/test-results/junit-quarantine.xml"
   api-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
