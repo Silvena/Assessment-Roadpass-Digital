@@ -3,10 +3,6 @@ const { AuthPage } = require('../pages/Authpage');
 const fs = require('fs');
 const path = require('path');
 
-/**
- * Global authentication setup for Roadtrippers.
- * Saves the storage state to a file for reuse in subsequent tests.
- */
 const AUTH_FILE = path.join(__dirname, '.auth', 'user.json');
 
 setup('authenticate', async ({ page }) => {

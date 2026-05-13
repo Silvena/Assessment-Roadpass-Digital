@@ -1,5 +1,8 @@
 const { defineConfig, devices } = require('@playwright/test');
+const path = require('path');
 require('dotenv').config();
+
+const STORAGE_STATE = path.join(__dirname, 'auth', '.auth', 'user.json');
 
 /**
  * Read environment variables from file.
@@ -28,7 +31,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 2 : 1,
   reporter: process.env.CI
     ? [
-        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['junit', { outputFile: 'reports/test-results/junit.xml' }],
         ['html', { open: 'never', outputFolder: 'playwright-report' }],
         ['list'],
       ]
@@ -56,17 +59,17 @@ module.exports = defineConfig({
     },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], storageState: './auth/.auth/user.json' },
+      use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'], storageState: './auth/.auth/user.json' },
+      use: { ...devices['Desktop Firefox'], storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'], storageState: './auth/.auth/user.json' },
+      use: { ...devices['Desktop Safari'], storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
 
