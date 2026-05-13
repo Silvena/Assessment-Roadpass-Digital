@@ -23,7 +23,7 @@ test.describe('Cookie Banner - Accept and Dismiss Tests', () => {
 
         // Check if cookie banner exists and is visible
         const cookieBanner = page.locator(
-            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings")'
+            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings"), button:has-text("Cookie Preferences")'
         ).first();
 
         const bannerExists = await cookieBanner.isVisible({ timeout: 5000 }).catch(() => false);
@@ -72,7 +72,7 @@ test.describe('Cookie Banner - Accept and Dismiss Tests', () => {
 
         // Define the cookie banner locator
         const cookieBannerLocator = page.locator(
-            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings")'
+            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings"), button:has-text("Cookie Preferences")'
         );
 
         // Check if any of these buttons exist in the DOM
@@ -83,7 +83,7 @@ test.describe('Cookie Banner - Accept and Dismiss Tests', () => {
 
             // Get the first visible button
             const firstButton = page.locator(
-                'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings")'
+                'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings"), button:has-text("Cookie Preferences")'
             ).first();
 
             const isVisible = await firstButton.isVisible({ timeout: 3000 }).catch(() => false);
@@ -93,7 +93,7 @@ test.describe('Cookie Banner - Accept and Dismiss Tests', () => {
             const buttonText = await firstButton.textContent();
             const trimmedText = buttonText.trim();
             console.log(`  Button text: "${trimmedText}"`);
-            expect(['Accept', 'Got it', 'OK', 'Cookie Settings']).toContain(trimmedText);
+            expect(['Accept', 'Got it', 'OK', 'Cookie Settings', 'Cookie Preferences']).toContain(trimmedText);
         } else {
             console.log('ℹ️ No cookie banner buttons found (may have been dismissed or not applicable)');
         }
@@ -140,7 +140,7 @@ test.describe('Cookie Banner - Accept and Dismiss Tests', () => {
         // 1. Not appear again (if cookie was saved)
         // 2. Appear again (if cookies not persisted or not a persistent banner)
         const bannerAfterReload = page.locator(
-            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings")'
+            'button:has-text("Accept"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Cookie Settings"), button:has-text("Cookie Preferences")'
         ).first();
 
         const bannerVisible = await bannerAfterReload.isVisible({ timeout: 3000 }).catch(() => false);

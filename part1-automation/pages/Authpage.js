@@ -25,7 +25,10 @@ class AuthPage extends BasePage {
         // "#onetrust-accept-btn-handler"    = "Accept All Cookies" on the bottom banner.
         // Excludes "Cookie Settings" — that button opens the modal and makes things worse.
         this.cookieBanner = page.locator(
-            '#accept-recommended-btn-handler, #onetrust-accept-btn-handler, button:has-text("Allow All"), button:has-text("Accept All Cookies"), button:has-text("Accept All")'
+            '#accept-recommended-btn-handler, #onetrust-accept-btn-handler, ' +
+            'button:has-text("Allow All"), button:has-text("Accept All Cookies"), ' +
+            'button:has-text("Accept All"), button:has-text("Cookie Preferences"), ' +
+            'button:has-text("Cookie Settings")'
         ).first();
     }
 
