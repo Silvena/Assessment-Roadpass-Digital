@@ -45,7 +45,7 @@ commands:
           command: |
             TEST_PATH="<< parameters.test-files >>"
             if [ << parameters.exclude-quarantine >> == "true" ]; then
-              EXTRA_FLAGS="--ignore=tests/quarantine/"
+              EXTRA_FLAGS="--skip =tests/quarantine/"
             else
               EXTRA_FLAGS=""
             fi
