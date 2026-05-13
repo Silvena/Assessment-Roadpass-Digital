@@ -6,13 +6,13 @@ commands:
       - checkout
       - restore_cache:
           keys:
-            - 'v1-node-deps-{{ checksum "package-lock.json" }}'
+            - 'v1-node-deps-{{ checksum "package.json" }}'
             - v1-node-deps-
       - run:
           name: Install dependencies
-          command: npm ci
+          command: npm install
       - save_cache:
-          key: 'v1-node-deps-{{ checksum "package-lock.json" }}'
+          key: 'v1-node-deps-{{ checksum "package.json" }}'
           paths:
             - node_modules
       - run:
