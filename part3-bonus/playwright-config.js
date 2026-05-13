@@ -1,4 +1,4 @@
-const { defineConfig } = require('@playwright/test');
+const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
     testDir: './',
@@ -19,6 +19,21 @@ module.exports = defineConfig({
         // Ignore HTTPS certificate errors (uncomment if needed behind a proxy)
         // ignoreHTTPSErrors: true,
     },
+
+    projects: [
+        {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+        },
+        {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+        },
+        {
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'] },
+        },
+    ],
 
     reporter: [
         ['list'],

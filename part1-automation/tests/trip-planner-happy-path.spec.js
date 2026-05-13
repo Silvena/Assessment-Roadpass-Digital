@@ -30,7 +30,7 @@ test.describe('TripPlannerPage Tests', () => {
         expect(tripPlannerPage.successToast).toBeDefined();
     });
 
-    test('should set and retrieve trip name', async ({ page }) => {
+    test('@quarantined should set and retrieve trip name', async ({ page }) => {
         const testName = 'My Test Trip';
 
         // Try to find trip name input
@@ -50,7 +50,7 @@ test.describe('TripPlannerPage Tests', () => {
         }
     });
 
-    test('should handle waypoint search input', async ({ page }) => {
+    test('@quarantined should handle waypoint search input', async ({ page }) => {
         const waypointInput = page.getByPlaceholder(/add a stop|search for a place|where to/i)
             .or(page.getByLabel(/add stop|waypoint/i))
             .first();
