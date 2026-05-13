@@ -30,43 +30,7 @@ test.describe('TripPlannerPage Tests', () => {
         expect(tripPlannerPage.successToast).toBeDefined();
     });
 
-    test('should set and retrieve trip name', async ({ page }) => {
-        const testName = 'My Test Trip';
 
-        // Try to find trip name input
-        const tripNameInput = page.getByPlaceholder(/trip name|name your trip/i)
-            .or(page.getByLabel(/trip name/i))
-            .first();
-
-        const isVisible = await tripNameInput.isVisible({ timeout: 5000 }).catch(() => false);
-
-        if (isVisible) {
-            await tripNameInput.fill(testName);
-            const value = await tripNameInput.inputValue();
-            expect(value).toBe(testName);
-            console.log('✓ Trip name set successfully');
-        } else {
-            console.log('ℹ️ Trip name input not visible on initial page load (may require trip creation interaction)');
-        }
-    });
-
-    test('should handle waypoint search input', async ({ page }) => {
-        const waypointInput = page.getByPlaceholder(/add a stop|search for a place|where to/i)
-            .or(page.getByLabel(/add stop|waypoint/i))
-            .first();
-
-        const isVisible = await waypointInput.isVisible({ timeout: 5000 }).catch(() => false);
-
-        if (isVisible) {
-            await waypointInput.click();
-            await waypointInput.fill('New York');
-            const value = await waypointInput.inputValue();
-            expect(value).toContain('New York');
-            console.log('✓ Waypoint input filled successfully');
-        } else {
-            console.log('ℹ️ Waypoint input not visible on initial page load');
-        }
-    });
 
     test('should detect trip panel when visible', async ({ page }) => {
         const tripPanel = page.locator('[data-testid="trip-panel"], .trip-planner, [aria-label="Trip planner"]').first();

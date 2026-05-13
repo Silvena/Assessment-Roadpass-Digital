@@ -4,23 +4,27 @@ commands:
     description: Install Node.js dependencies and configure environment
     steps:
       - checkout
+      - run:
+          name: List files for debugging
+          command: ls -la
       - restore_cache:
           keys:
-            - 'v1-node-deps-{{ checksum "part1-automation/package-lock.json" }}'
+            - 'v1-node-deps-{{ checksum "package-lock.json" }}'
+            - 'v1-node-deps-{{ checksum "package.json" }}'
             - v1-node-deps-
       - run:
           name: Install dependencies
-          command: cd part1-automation && npm ci
+          command: npm install
       - save_cache:
-          key: 'v1-node-deps-{{ checksum "part1-automation/package-lock.json" }}'
+          key: 'v1-node-deps-{{ checksum "package-lock.json" }}'
           paths:
-            - part1-automation/node_modules
+            - node_modules
       - run:
           name: Install Playwright Browsers
-          command: cd part1-automation && npx playwright install --with-deps
+          command: npx playwright install --with-deps
       - run:
           name: Verify Playwright installation
-          command: cd part1-automation && npx playwright --version
+          command: npx playwright --version
   run-playwright-tests:
     description: Run Playwright tests with specified project(s)
     parameters:
@@ -39,16 +43,16 @@ commands:
       - run:
           name: 'Run Playwright tests [<< parameters.project >>]'
           command: |
-            cd part1-automation
             TEST_PATH="<< parameters.test-files >>"
             if [ << parameters.exclude-quarantine >> == "true" ]; then
-              EXTRA_FLAGS="--ignore=tests/quarantine/"
+              EXTRA_FLAGS="--grep-invert=@quarantine"
             else
               EXTRA_FLAGS=""
             fi
 
-            # Run tests with JUnit reporter
-            npx playwright test $TEST_PATH \
+            # Run tests with JUnit reporter from root using npx
+            npx playwright test part1-automation/$TEST_PATH \
+              --config=part1-automation/playwright.config.js \
               --project=<< parameters.project >> \
               --reporter=list,junit \
               $EXTRA_FLAGS
@@ -57,7 +61,7 @@ commands:
     description: 'Store JUnit XML, screenshots, videos, and traces'
     steps:
       - store_test_results:
-          path: part1-automation/test-results
+          path: part1-automation/reports/test-results
       - store_artifacts:
           path: part1-automation/reports/test-results
           destination: test-results
@@ -88,10 +92,7 @@ commands:
 
 
             # Parse JUnit XML to get test counts
-
-            cd part1-automation
-
-            JUNIT_FILE="test-results/junit.xml"
+            JUNIT_FILE="part1-automation/reports/test-results/junit.xml"
 
 
             if [ ! -f "$JUNIT_FILE" ]; then
@@ -199,6 +200,7 @@ commands:
               -d "$PAYLOAD"
 jobs:
   setup:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -206,29 +208,30 @@ jobs:
       - run:
           name: Global authentication setup
           command: |
-            cd part1-automation
-
-            # Run global setup (generates auth/.auth/user.json)
+            # Run global setup (generates part1-automation/auth/.auth/user.json)
             echo "Running global authentication setup..."
-            if ! npx playwright test --config=playwright.config.js 2>&1 | grep -q "Auth state saved"; then
-              echo "??  Global setup completed (may have used empty auth state)"
+            if ! npx playwright test part1-automation/auth/global.setup.js --config=part1-automation/playwright.config.js 2>&1 | tee /tmp/setup-output.log | grep -q "Auth state saved"; then
+              echo "⚠️ Global setup did not report success! Checking output..."
+              cat /tmp/setup-output.log
             fi
-
+            
             # Verify auth file exists
-            if [ -f "auth/.auth/user.json" ]; then
-              echo "? Auth session created"
-              ls -lh auth/.auth/user.json
+            if [ -f "part1-automation/auth/.auth/user.json" ]; then
+              echo "✅ Auth session created"
+              ls -lh part1-automation/auth/.auth/user.json
             else
-              echo "? Auth session not found; tests will authenticate inline"
-              mkdir -p auth/.auth
-              echo '{"cookies":[],"origins":[]}' > auth/.auth/user.json
+              echo "⚠️ Auth session not found; tests will authenticate inline"
+              mkdir -p part1-automation/auth/.auth
+              echo '{"cookies":[],"origins":[]}' > part1-automation/auth/.auth/user.json
             fi
-          no_output_timeout: 5m
+          no_output_timeout: 10m
       - persist_to_workspace:
           root: .
           paths:
             - part1-automation/auth/.auth/user.json
+            - part1-automation/reports/test-results/setup-failure.png
   auth-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -242,6 +245,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   trip-planning-tests-chromium:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -261,6 +265,7 @@ jobs:
             tests/trip-planning-edge-cases.spec.js
       - notify-slack-on-failure
   trip-planning-tests-firefox:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -276,6 +281,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   trip-planning-tests-webkit:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -291,6 +297,7 @@ jobs:
       - store-test-results
       - notify-slack-on-failure
   quarantine-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -306,10 +313,10 @@ jobs:
           name: Report quarantine test results
           when: always
           command: |
-            cd part1-automation
             echo "Quarantine test results stored separately"
-            echo "Location: reports/test-results/junit-quarantine.xml"
+            echo "Location: part1-automation/reports/test-results/junit-quarantine.xml"
   api-tests:
+    working_directory: ~/project
     docker:
       - image: 'cimg/node:22.0'
     steps:
@@ -317,14 +324,13 @@ jobs:
       - run:
           name: Run API tests (part3)
           command: |
-            cd part3-bonus/api-tests
-            ../../part1-automation/node_modules/.bin/playwright test \
-              --config=../playwright-config.js
+            npx playwright test \
+              --config=part3-bonus/playwright-config.js
           no_output_timeout: 5m
       - store_test_results:
-          path: part3-bonus/test-results
+          path: part3-bonus/reports/test-results
       - store_artifacts:
-          path: part3-bonus/test-results
+          path: part3-bonus/reports/test-results
           destination: api-test-results
       - notify-slack-on-failure
   report-aggregation:

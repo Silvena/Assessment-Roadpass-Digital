@@ -1,4 +1,4 @@
-const { defineConfig } = require('@playwright/test');
+const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
     testDir: './',
@@ -12,17 +12,33 @@ module.exports = defineConfig({
 
         // Extra HTTP headers sent with every API request
         extraHTTPHeaders: {
-            'Accept': 'application/json',
-            'User-Agent': 'Playwright-API-Test/1.0',
+            'Accept': '*/*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         },
 
         // Ignore HTTPS certificate errors (uncomment if needed behind a proxy)
         // ignoreHTTPSErrors: true,
     },
 
+    projects: [
+        {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+        },
+        {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+        },
+        {
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'] },
+        },
+    ],
+
     reporter: [
         ['list'],
         ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['junit', { outputFile: 'reports/test-results/junit.xml' }],
     ],
 });
 

@@ -1,5 +1,8 @@
 const { defineConfig, devices } = require('@playwright/test');
+const path = require('path');
 require('dotenv').config();
+
+const STORAGE_STATE = path.join(__dirname, 'auth', '.auth', 'user.json');
 
 /**
  * Read environment variables from file.
@@ -13,28 +16,22 @@ require('dotenv').config();
  * @see https://playwright.dev/docs/test-configuration
  */
 module.exports = defineConfig({
-  testDir: './tests',
+  testDir: '.',
+  testMatch: ['tests/**/*.spec.js'],
   timeout:60_000,
   expect:{timeout:10_000},
 
-  /* Global setup for authentication */
-  globalSetup: './auth/global.setup.js',
-
   /* Run tests in files in parallel */
   fullyParallel: true,
-
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-
   /* In CI, retry flaky tests up to 2 times. Locally, no retries. */
   retries: process.env.CI ? 2 : 0,
-
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 2 : 1,
-
   reporter: process.env.CI
     ? [
-        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['junit', { outputFile: 'reports/test-results/junit.xml' }],
         ['html', { open: 'never', outputFolder: 'playwright-report' }],
         ['list'],
       ]
@@ -46,9 +43,8 @@ module.exports = defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL: 'https://maps.roadtrippers.com',
-    storageState: './auth/.auth/user.json',
-
-    screenshot: 'only-on-failure',
+    headless: true,
+    screenshot: 'on',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
     actionTimeout: 15_000,
@@ -58,16 +54,23 @@ module.exports = defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
+      name: 'setup',
+      testMatch: /auth\/.*\.setup\.js/,
+    },
+    {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
+      dependencies: ['setup'],
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: { ...devices['Desktop Firefox'], storageState: STORAGE_STATE },
+      dependencies: ['setup'],
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: { ...devices['Desktop Safari'], storageState: STORAGE_STATE },
+      dependencies: ['setup'],
     },
 
     /* Test against mobile viewports. */

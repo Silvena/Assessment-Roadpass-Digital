@@ -1,0 +1,8 @@
+{
+  "name": "assessment-roadpass-digital-root",
+  "private": true,
+  "workspaces": [
+    "part1-automation",
+    "part3-bonus"
+  ]
+}
