@@ -283,7 +283,7 @@ Flaky: 2/8 edge-case tests need retry
 3. **Exclude from PR runs** (keep in nightly):
    ```yaml
    # .circleci/config.yml
-   - run: npx playwright test tests/*.spec.js --ignore=tests/quarantine/
+   - run: npx playwright test tests/*.spec.js 
    ```
 
 4. **Monitor separately**:
