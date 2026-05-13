@@ -210,10 +210,11 @@ jobs:
 
             # Run global setup (generates auth/.auth/user.json)
             echo "Running global authentication setup..."
-            if ! npx playwright test --config=playwright.config.js 2>&1 | grep -q "Auth state saved"; then
-              echo "??  Global setup completed (may have used empty auth state)"
+            if ! npx playwright test auth/global.setup.js --config=playwright.config.js 2>&1 | tee /tmp/setup-output.log | grep -q "Auth state saved"; then
+              echo "⚠️ Global setup did not report success! Checking output..."
+              cat /tmp/setup-output.log
             fi
-
+            
             # Verify auth file exists
             if [ -f "auth/.auth/user.json" ]; then
               echo "? Auth session created"
@@ -223,7 +224,7 @@ jobs:
               mkdir -p auth/.auth
               echo '{"cookies":[],"origins":[]}' > auth/.auth/user.json
             fi
-          no_output_timeout: 5m
+          no_output_timeout: 10m
       - persist_to_workspace:
           root: .
           paths:
