@@ -5,7 +5,8 @@ Part 1: POM-based test suite (Happy Path, Edge, &amp; Negative cases).
 Part 2: CircleCI integration strategy  .circleci/config.yml.  
 Part 3: API &amp; Bonus extensions.  
 Focuses on clean code, stable waits, and CI/CD scalability.
-Time Spent: ~6.5 hours
+Time Spent: ~6.5 hours.
+
 How to run:
 ## Prerequisites
 
